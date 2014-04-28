@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+
+    <title>Test automation in Base CRM</title>
+
+    <meta name="description" content="Test automation in Base CRM">
+    <meta name="author" content="Tomasz Nowak">
+
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <link rel="stylesheet" href="css/reveal.min.css">
+    <link rel="stylesheet" href="css/theme/default.css" id="theme">
+
+    <!-- For syntax highlighting -->
+    <link rel="stylesheet" href="lib/css/zenburn.css">
+
+    <!-- If the query includes 'print-pdf', include the PDF print sheet -->
+    <script>
+      if( window.location.search.match( /print-pdf/gi ) ) {
+        var link = document.createElement( 'link' );
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = 'css/print/pdf.css';
+        document.getElementsByTagName( 'head' )[0].appendChild( link );
+      }
+    </script>
+
+    <!--[if lt IE 9]>
+    <script src="lib/js/html5shiv.js"></script>
+    <![endif]-->
+  </head>
+
+  <body>
+
+    <div class="reveal">
+
+      <!-- Any section element inside of this container is displayed as a slide -->
+      <div class="slides">
+        <section>
+          <h1>Web Application Testing made easy</h1>
+          <h3>Test automation in Base CRM</h3>
+          <p>
+            <small>Created by <a href="#">Tomasz Nowak</a></small>
+          </p>
+        </section>
+
+        <section>
+          <h2>Agenda</h2>
+          <ul>
+            <li>Page Object Pattern</li></br>
+            <li>Software stack we are using</li></br>
+            <li>Case study</li></br>
+          </ul>
+        </section>
+
+        <section>
+          <section data-background="img/balcony1.jpg">
+            <h2>Before Page Objects</h2>
+          </section>
+
+          <section>
+            <h2>Page Object Pattern</h2>
+            <ul>
+              <li>Technique for structuring test code that:</li><br />
+              <ul>
+                <li>Promotes reuse and reduces duplication</li><br />
+                <li>Makes tests readable</li><br />
+                <li>Makes tests more robust (less brittle)</li><br />
+                <li>Improves maintainability, particularly if
+                  the application is rapidly evolving</li><br />
+              </ul>
+            </ul>
+          </section>
+
+          <section>
+            <h2>The Page Object</h2>
+            <ul>
+              <li class="fragment roll-in">Allows to <u>model UI</u> in test code</li><br />
+              <li class="fragment roll-in">Consolidates the code for interacting with any
+                given UI element</li><br />
+              <li class="fragment roll-in">Exposes methods that reflect the things a user
+                can <u>see</u> and <u>do</u> on that page</li><br />
+              <li class="fragment roll-in">Hides the details of telling the browser <u>how</u>
+                to do those things</li><br />
+            </ul>
+          </section>
+          <section data-background="img/balcony2.jpg">
+            <h2>After Page Objects</h2>
+          </section>
+
+        </section>
+
+       <section>
+         <section>
+           <h2>Software stack we are using</h2>
+           <p><a href="https://www.ruby-lang.org/en/">
+               <img src="img/ruby-logo.png"  alt="Ruby Logo" />
+             </a>
+           <p>
+           <ul>
+             <li><a href="http://rspec.info/">rspec</a></li>
+             <li><a href="http://watir.com/">watir</a></li>
+             <li><a href="https://github.com/cheezy/page-object">page-object</a></li>
+             <li><a href="https://github.com/thoughtbot/factory_girl">factory-girl</a></li>
+             <li><a href="http://jenkins-ci.org/">jenkins</a></li>
+           </ul>
+         </section>
+
+        <section>
+          <p>watir</p>
+          <pre class="stretch"><code data-trim class=" hljs ruby">
+require 'watir-webdriver'
+
+browser = Watir::Browser.new :chrome
+browser.goto "http://translate.google.com/"
+
+browser.div(id: "gt-sl-gms").click
+
+menu = browser.div(id: "gt-sl-gms-menu")
+menu.when_present.div(class: "goog-menuitem", text: "Norwegian").click
+
+puts browser.div(css: ".jfk-button-checked").text
+
+browser.text_field(id: "source").set("ost")
+
+result_box = browser.span(id: "result_box")
+browser.wait_until { result_box.text.length &gt 0 }
+
+puts result_box.text
+browser.close
+          </code></pre>
+        </section>
+       </section>
+
+       <section>
+         <h2>Case study</h2>
+       </section>
+       <section>
+         <img src="img/new-lead.png" />
+       </section>
+
+       <section>
+         <p>Test scenario: Add a new lead</p>
+         <pre class="stretch"><code data-trim class=" hljs ruby">
+require 'spec_helper'
+
+describe "Leads" do
+  describe "Add a lead with standard fields" do
+    before(:all) do
+      @lead = build(:lead)
+      on(DashboardPage).go_to_leads
+    end
+
+    it "Open a new lead form" do
+      on(LeadsPage).open_new_lead
+    end
+
+    it "Populate data for new lead" do
+      on(NewLeadPage).populate_page_with(@lead)
+      on(NewLeadPage).save
+    end
+
+    it "Check mobile" do
+      expect(on(LeadPage).mobile.text).to eq(@lead.mobile)
+    end
+
+    it "Check phone" do
+      expect(on(LeadPage).phone.text).to eq(@lead.phone)
+    end
+
+    it "Check email" do
+      expect(on(LeadPage).email.text).to eq(@lead.email)
+    end
+  end
+end
+         </code></pre>
+       </section>
+
+       <section>
+         <section>
+           <h2>GIVEN - data setup</h2>
+           <pre><code data-trim class=" hljs ruby">
+before(:all) do
+  @lead = build(:lead)
+  on(DashboardPage).go_to_leads
+end
+           </code></pre>
+         </section>
+         <section>
+           <p>Lead model</p>
+           <pre><code data-trim class=" hljs ruby">
+require 'hashie'
+
+module Model
+  class Lead &lt Hashie::Dash
+    property :first_name
+    property :last_name
+    property :company_name
+    property :title
+    property :email
+    property :mobile
+    property :phone
+    property :street
+    property :city
+    property :region
+    property :zip
+    property :country
+    property :user
+  end
+end
+            </code></pre>
+         </section>
+         <section>
+           <p>Lead factory</p>
+           <pre><code data-trim class=" hljs ruby">
+require_relative '../models/lead'
+
+FactoryGirl.define do
+  factory :lead, class: Model::Lead do
+    first_name { Faker::Name.first_name }
+    last_name { Faker::Name.last_name }
+    company_name { Faker::Company.name }
+    title { Faker::Name.title }
+    email { Faker::Internet.email }
+    mobile { Faker::PhoneNumber.cell_phone }
+    phone { Faker::PhoneNumber.phone_number }
+    street { Faker::Address.street_address }
+    city { Faker::Address.city }
+    region { Faker::Address.state }
+    zip { Faker::Address.zip }
+    country 'United States'
+  end
+end
+           </code></pre>
+         </section>
+       </section>
+
+       <section>
+         <section>
+           <h2>WHEN - test execution</h2>
+           <pre><code data-trim class=" hljs ruby">
+it "Open a new lead form" do
+  on(LeadsPage).open_new_lead
+end
+
+it "Populate data for new lead" do
+  on(NewLeadPage).populate_page_with(@lead)
+  on(NewLeadPage).save
+end
+           </code></pre>
+         </section>
+         <section>
+           <p>New Lead Page</p>
+           <pre><code data-trim class=" hljs ruby">
+class NewLeadPage < AbstractPage
+  include PageObject
+
+  page_url("https://app.futuresimple.com/leads/new")
+
+  text_field(:first_name, :id =&gt "lead-first-name")
+  text_field(:last_name, :id =&gt "lead-last-name")
+  text_field(:company_name, :id =&gt "lead-company-name")
+  text_field(:title, :id =&gt "lead-title")
+  text_field(:email, :id =&gt "lead-email")
+  text_field(:mobile, :id =&gt "lead-mobile")
+  text_field(:phone, :id =&gt "lead-phone")
+  text_field(:street, :id =&gt "lead-street")
+  text_field(:city, :id =&gt "lead-city")
+  text_field(:region, :id =&gt "lead-region")
+  text_field(:zip, :id =&gt "lead-zip")
+  link(:save, :css =&gt ".save")
+
+end
+           </code></pre>
+         </section>
+         <section>
+           <p>Methods added by PageObject module</p>
+           <pre><code data-trim class=" hljs ruby">
+def first_name
+  @browser.text_field(:id =&gt "lead-first-name").value
+end
+
+def first_name=(first_name)
+  @browser.text_field(:id =&gt "lead-first-name").set(first_name)
+end
+
+def first_name_element
+  @browser.text_field(:id =&gt "lead-first-name")
+end
+
+def first_name?
+  @browser.text_field(:id =&gt "lead-first-name").exists?
+end
+           </code></pre>
+         </section>
+       </section>
+
+       <section>
+         <section>
+           <h2>THEN - checking expectation</h2>
+           <pre><code data-trim class=" hljs ruby">
+it "Check mobile" do
+  expect(on(LeadPage).mobile.text).to eq(@lead.mobile)
+end
+
+it "Check phone" do
+  expect(on(LeadPage).phone.text).to eq(@lead.phone)
+end
+
+it "Check email" do
+  expect(on(LeadPage).email.text).to eq(@lead.email)
+end
+           </code></pre>
+         </section>
+         <section>
+           <p>Lead Page</p>
+           <pre class="stretch"><code data-trim class=" hljs ruby">
+class LeadPage < AbstractPage
+  include PageObject
+
+  div(:details, :id => "details")
+
+  def mobile
+    list_item_with_link_and_label("mobile")
+  end
+
+  def phone
+    list_item_with_link_and_label("work")
+  end
+
+  def email
+    list_item_with_link_and_label("email")
+  end
+
+  private
+
+  def list_item_with_link_and_label(label)
+    list_item = details_element.unordered_list_element.list_item_elements.find do |item|
+      item.link_element.exists? && item.span_element(:text => label).exists?
+    end
+    list_item.link_element
+  end
+
+end
+           </code></pre>
+         </section>
+       </section>
+
+       <section>
+         <p>Element is not attached to the page document</p>
+         <p class="fragment roll-in highlight-red">
+           Stale Element Reference Error<br />
+         </p>
+         <pre class="stretch"><code data-trim class=" hljs ruby">
+require 'delegate'
+require 'page-object'
+
+class ElementDelegator &lt Delegator
+
+  def initialize(obj)
+    super
+    @delegate_sd_obj = obj
+  end
+
+  def method_missing(m, *args, &block)
+    tries = 0
+    begin
+      tries += 1
+      super
+    rescue Selenium::WebDriver::Error::StaleElementReferenceError
+      tries &lt 5 ? retry : raise
+    end
+  end
+
+  def __getobj__
+    @delegate_sd_obj
+  end
+
+  def __setobj__(obj)
+    @delegate_sd_obj = obj
+  end
+end
+
+module PageObject
+  module Elements
+    class Element
+      def element
+        ElementDelegator.new(@element)
+      end
+    end
+  end
+end
+           </code></pre>
+       </section>
+
+       <section>
+         <p>Extending page object gem</p>
+         <pre><code data-trim class=" hljs ruby">
+module BaseElementExtensions
+  def fill_with_text_via_js(text, repetitions = 1)
+    selector = self.element.instance_variable_get(:@delegate_sd_obj).instance_variable_get(:@selector)[:css]
+    raise "Only :css supported." unless selector
+    script =
+    %Q{
+      var generatedText = new Array(#{repetitions}).join('#{text}');
+      $('#{selector}').text(generatedText);
+      $('#{selector}').focus();
+    }
+    CurrentBrowser.instance.execute_script(script)
+  end
+end
+
+PageObject::Elements::Element.send(:include, BaseElementExtensions)
+
+           </code></pre>
+       </section>
+
+
+       <section>
+         <h2>Resources</h2>
+         <ul>
+           <li>
+             <p>Cucumber & Cheese A Testers Workshop<br />
+             <small>by Jeff Morgan / <a href="https://twitter.com/chzy">@chzy</a></small></p>
+           </li>
+         </ul>
+         <a href="https://leanpub.com/cucumber_and_cheese">
+           <img src="img/cucumber-cheese.png" />
+         </a>
+       </section>
+
+       <section>
+         <h1>THE END</h1>
+         <h3>By Tomasz Nowak</h3>
+       </section>
+
+      </div>
+    </div>
+
+    <script src="lib/js/head.min.js"></script>
+    <script src="js/reveal.min.js"></script>
+
+    <script>
+
+      // Full list of configuration options available here:
+      // https://github.com/hakimel/reveal.js#configuration
+      Reveal.initialize({
+        controls: true,
+        progress: true,
+        history: true,
+        center: true,
+        progress: true,
+        slideNumber: true,
+
+        theme: Reveal.getQueryHash().theme, // available themes are in /css/theme
+        transition: Reveal.getQueryHash().transition || 'default', // default/cube/page/concave/zoom/linear/fade/none
+
+        // Parallax scrolling
+        // parallaxBackgroundImage: 'https://s3.amazonaws.com/hakim-static/reveal-js/reveal-parallax-1.jpg',
+        // parallaxBackgroundSize: '2100px 900px',
+
+        // Optional libraries used to extend on reveal.js
+        dependencies: [
+          { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+          { src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+          { src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+          { src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+          { src: 'plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+          { src: 'plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }
+        ]
+      });
+
+    </script>
+
+  </body>
+</html>
